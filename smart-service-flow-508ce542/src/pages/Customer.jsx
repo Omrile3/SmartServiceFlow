@@ -9,6 +9,7 @@ import { QrCode, AlertCircle, Users, TableProperties, LucideUtensils, Clipboard 
 import MenuDisplay from "../components/customer/MenuDisplay";
 import ServiceRequestDisplay from "../components/customer/ServiceRequestDisplay";
 import CameraScanner from "../components/customer/CameraScanner";
+import { Button } from "@/components/ui/button";
 
 export default function Customer() {
   const [menuItems, setMenuItems] = useState([
