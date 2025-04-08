@@ -28,11 +28,17 @@ public class Restaurant {
         public void setHeight(int height) { this.height = height; }
         public List<Table> getTables() { return tables; }
         public void setTables(List<Table> tables) { this.tables = tables; }
+        public void addTable(Table table) {
+            tables.add(table);
+        }
+        public void removeTable(String tableId) {
+            tables.removeIf(table -> table.getId().equals(tableId));
+        }
     }
 
-    public static class Table {
-        private String id;
-        private int number;
+       public static class Table {
+        private String id; // UUID for the table
+        private int number; // Table number
         private int seats;
         private int x;
         private int y;
@@ -76,16 +82,12 @@ public class Restaurant {
         String tableId = "table-" + UUID.randomUUID().toString();
         int tableNumber = layout.getTables().size() + 1;
         Table table = new Table(tableId, tableNumber, seats, x, y);
-        layout.getTables().add(table);
+        layout.addTable(table);
         return table;
     }
 
     public void removeTable(String tableId) {
-        layout.setTables(
-            layout.getTables().stream()
-                .filter(table -> !table.getId().equals(tableId))
-                .toList()
-        );
+        layout.removeTable(tableId);
     }
 
     public void updateTableStatus(String tableId, String status) {
@@ -103,7 +105,7 @@ public class Restaurant {
     }
 
     public void removeMenuItem(String itemId) {
-        menu.removeIf(item -> item.getId().equals(itemId));
+        menu.removeIf(item -> item.getId().equals(itemId)); // Remove by ID
     }
 
     // Service Requests
@@ -141,6 +143,33 @@ public class Restaurant {
 
     public void removeStaffMember(String staffId) {
         staff.removeIf(member -> member.getId().equals(staffId));
+    }
+    
+    public Bill createBill(String tableId) {
+        Bill bill = new Bill(tableId);
+        
+        // Get all orders for this table
+        orders.stream()
+              .filter(order -> order.getTableId().equals(tableId))
+              .forEach(order -> {
+                  // For each order, add its items to the bill
+                  order.getItemIds().forEach(itemId -> {
+                      menu.stream()
+                          .filter(item -> item.getId().equals(itemId))
+                          .findFirst()
+                          .ifPresent(bill::addItem);
+                  });
+              });
+        
+        return bill;
+    }
+    
+    public void markBillAsPaid(Bill bill) {
+        bill.setStatus("PAID");
+        // You might want to clear the orders for this table
+        orders.removeIf(order -> order.getTableId().equals(bill.getTableId()));
+        // Update table status
+        updateTableStatus(bill.getTableId(), "available");
     }
 
     // Getters
