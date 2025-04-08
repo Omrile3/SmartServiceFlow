@@ -1,12 +1,47 @@
+
 import React from 'react';
-import { Table2, GripHorizontal, X } from 'lucide-react';
+import { Table2, GripHorizontal, X, Utensils, DollarSign } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
-export default function ResizableTable({ table, onMove, onResize, onSelect, onRemove }) {
+export default function ResizableTable({ table, onMove, onResize, onSelect, onRemove, status }) {
   const [isDragging, setIsDragging] = React.useState(false);
   const [isResizing, setIsResizing] = React.useState(false);
   const [startPos, setStartPos] = React.useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = React.useState({ width: 0, height: 0 });
+  const [tableStatus, setTableStatus] = React.useState(null);
+
+  React.useEffect(() => {
+    // Get table status from localStorage
+    const savedStatuses = localStorage.getItem('tableStatuses');
+    if (savedStatuses) {
+      try {
+        const statuses = JSON.parse(savedStatuses);
+        if (statuses[table.id]) {
+          setTableStatus(statuses[table.id].status);
+        }
+      } catch (e) {
+        console.error("Error loading table status:", e);
+      }
+    }
+
+    // Check for orders that reference this table
+    const savedOrders = localStorage.getItem('orders');
+    if (savedOrders) {
+      try {
+        const orders = JSON.parse(savedOrders);
+        const tableOrders = orders.filter(order => order.table_id === table.id);
+        
+        if (tableOrders.some(order => order.payment_status !== 'paid')) {
+          setTableStatus('occupied');
+        }
+      } catch (e) {
+        console.error("Error checking table orders:", e);
+      }
+    }
+  }, [table.id]);
+
+  const hasUnpaidOrders = status?.hasUnpaidOrders;
+  const pendingOrderCount = status?.pendingOrderCount || 0;
 
   const handleMouseDown = (e) => {
     if (e.target.classList.contains('resize-handle')) {
@@ -51,9 +86,19 @@ export default function ResizableTable({ table, onMove, onResize, onSelect, onRe
     }
   }, [isDragging, isResizing]);
 
+  // Determine the status color of the table
+  const getTableStatusColor = () => {
+    if (status?.hasUnpaidOrders || tableStatus === 'occupied') {
+      return "border-orange-500 bg-orange-50"; // Occupied with unpaid bills
+    } else if (status?.pendingOrderCount > 0) {
+      return "border-blue-500 bg-blue-50"; // Has pending orders
+    }
+    return "border-green-500 bg-green-50"; // Free
+  };
+
   return (
     <div
-      className="absolute bg-white border-2 border-gray-300 rounded shadow-md cursor-move flex flex-col"
+      className={`absolute border-2 rounded shadow-md cursor-move flex flex-col ${getTableStatusColor()}`}
       style={{
         left: table.x,
         top: table.y,
@@ -62,12 +107,25 @@ export default function ResizableTable({ table, onMove, onResize, onSelect, onRe
       }}
       onMouseDown={handleMouseDown}
     >
-      <div className="flex justify-between items-center p-2 bg-gray-50 border-b">
+      <div className="flex justify-between items-center p-2 bg-white bg-opacity-90 border-b">
         <div className="flex items-center gap-2">
           <Table2 className="w-4 h-4 text-blue-600" />
           <span className="text-sm font-medium">{table.id}</span>
         </div>
         <div className="flex items-center gap-1">
+          {pendingOrderCount > 0 && (
+            <div className="flex items-center text-blue-600">
+              <Utensils className="w-3 h-3 mr-1" />
+              <span className="text-xs">{pendingOrderCount}</span>
+            </div>
+          )}
+          
+          {hasUnpaidOrders && (
+            <div className="flex items-center text-orange-600 ml-1">
+              <DollarSign className="w-3 h-3" />
+            </div>
+          )}
+          
           <Button
             variant="ghost"
             size="icon"

@@ -9,6 +9,10 @@ export const ServiceRequest = base44.entities.ServiceRequest;
 
 export const Order = base44.entities.Order;
 
+export const ServiceType = base44.entities.ServiceType;
+
+export const Table = base44.entities.Table;
+
 
 
 // auth sdk:

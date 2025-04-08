@@ -1,12 +1,10 @@
+
 import React, { useState, useEffect } from "react";
-import { ServiceRequest } from "@/api/entities";
-import { User } from "@/api/entities";
-import { Restaurant } from "@/api/entities";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, CheckCircle, Table2, FilterX, Plus, Clock } from "lucide-react";
+import { Play, CheckCircle, Table2, FilterX, Plus, Clock, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 export default function ServiceRequests() {
   const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState({
+    role_type: localStorage.getItem("userRoleType") || "staff",
+    assigned_tables: []
+  });
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshTimer, setRefreshTimer] = useState(30);
@@ -25,14 +26,15 @@ export default function ServiceRequests() {
     details: ""
   });
 
+  // Load data when component mounts
   useEffect(() => {
-    loadUserAndData();
+    loadData();
     
     // Set up refresh timer
     const interval = setInterval(() => {
       setRefreshTimer(prev => {
         if (prev <= 1) {
-          loadRequests();
+          loadData();
           return 30;
         }
         return prev - 1;
@@ -42,61 +44,157 @@ export default function ServiceRequests() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadUserAndData = async () => {
-    setLoading(true);
-    try {
-      const user = await User.me();
-      setCurrentUser(user);
-      
-      // Load tables information
-      const restaurants = await Restaurant.list();
-      if (restaurants.length > 0) {
-        setTables(restaurants[0]?.layout?.tables || []);
+  // Use an interval to periodically refresh service requests
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Get the latest service requests from localStorage
+      const savedRequests = localStorage.getItem('serviceRequests');
+      if (savedRequests) {
+        try {
+          const parsedRequests = JSON.parse(savedRequests);
+          setRequests(parsedRequests);
+        } catch (error) {
+          console.error("Error refreshing service requests:", error);
+        }
       }
-      
-      await loadRequests();
-    } catch (error) {
-      console.error("Error loading data:", error);
+    }, 10000); // Check every 10 seconds
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load all necessary data
+  const loadData = () => {
+    setLoading(true);
+    
+    // Load service requests from localStorage
+    const savedRequests = localStorage.getItem('serviceRequests');
+    if (savedRequests) {
+      try {
+        setRequests(JSON.parse(savedRequests));
+      } catch (error) {
+        console.error('Error parsing saved requests:', error);
+        initializeDefaultRequests();
+      }
+    } else {
+      initializeDefaultRequests();
     }
+    
+    // Load tables from localStorage
+    const savedTables = localStorage.getItem('restaurantTables');
+    if (savedTables) {
+      try {
+        setTables(JSON.parse(savedTables));
+      } catch (error) {
+        console.error('Error parsing saved tables:', error);
+        initializeDefaultTables();
+      }
+    } else {
+      initializeDefaultTables();
+    }
+    
+    // Load user assignment data
+    const savedAssignments = localStorage.getItem('staffAssignments');
+    if (savedAssignments) {
+      try {
+        const assignments = JSON.parse(savedAssignments);
+        const roleType = localStorage.getItem("userRoleType") || "staff";
+        setCurrentUser(prev => ({
+          ...prev,
+          role_type: roleType,
+          assigned_tables: assignments[roleType] || []
+        }));
+      } catch (error) {
+        console.error('Error parsing saved assignments:', error);
+      }
+    }
+    
     setLoading(false);
   };
 
-  const loadRequests = async () => {
-    try {
-      let activeRequests;
+  // Save service requests when they change
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem('serviceRequests', JSON.stringify(requests));
+    }
+  }, [requests, loading]);
+
+  // Save staff assignments when they change
+  useEffect(() => {
+    if (!loading && currentUser) {
+      const savedAssignments = localStorage.getItem('staffAssignments');
+      let assignments = {};
       
-      if (currentUser?.role_type === 'staff' && currentUser?.assigned_tables?.length) {
-        // For staff, only show requests from assigned tables
-        activeRequests = await ServiceRequest.filter({
-          table_id: currentUser.assigned_tables,
-          status: ["pending", "in_progress"]
-        });
-      } else {
-        // For managers or staff without assigned tables, show all requests
-        activeRequests = await ServiceRequest.filter({
-          status: ["pending", "in_progress"]
-        });
+      if (savedAssignments) {
+        try {
+          assignments = JSON.parse(savedAssignments);
+        } catch (error) {
+          console.error('Error parsing saved assignments:', error);
+        }
       }
       
-      setRequests(activeRequests);
-      setRefreshTimer(30);
-    } catch (error) {
-      console.error("Error loading requests:", error);
+      assignments[currentUser.role_type] = currentUser.assigned_tables;
+      localStorage.setItem('staffAssignments', JSON.stringify(assignments));
     }
+  }, [currentUser, loading]);
+
+  const initializeDefaultRequests = () => {
+    const defaultRequests = [
+      {
+        id: "req-1",
+        table_id: "table-1",
+        type: "water",
+        details: "Need water for a party of 4",
+        status: "pending",
+        created_date: new Date(Date.now() - 10 * 60000).toISOString() // 10 mins ago
+      },
+      {
+        id: "req-2",
+        table_id: "table-3",
+        type: "napkins",
+        details: "Need extra napkins please",
+        status: "in_progress",
+        created_date: new Date(Date.now() - 5 * 60000).toISOString() // 5 mins ago
+      },
+      {
+        id: "req-3",
+        table_id: "table-5",
+        type: "assistance",
+        details: "Need help with menu options",
+        status: "pending",
+        created_date: new Date(Date.now() - 2 * 60000).toISOString() // 2 mins ago
+      }
+    ];
+    setRequests(defaultRequests);
+    localStorage.setItem('serviceRequests', JSON.stringify(defaultRequests));
   };
 
-  const updateStatus = async (requestId, status) => {
-    try {
-      await ServiceRequest.update(requestId, { status });
-      loadRequests();
-    } catch (error) {
-      console.error("Error updating request:", error);
-    }
+  const initializeDefaultTables = () => {
+    const defaultTables = [
+      { id: "table-1", seats: 4 },
+      { id: "table-2", seats: 2 },
+      { id: "table-3", seats: 6 },
+      { id: "table-4", seats: 4 },
+      { id: "table-5", seats: 8 }
+    ];
+    setTables(defaultTables);
+  };
+
+  const updateStatus = (requestId, status) => {
+    setRequests(prev => 
+      prev.map(request => 
+        request.id === requestId 
+          ? { ...request, status } 
+          : request
+      )
+    );
+    
+    alert(`Request status updated to ${status}.`);
   };
   
-  const assignTable = async (tableId) => {
-    try {
-      const existingTables = currentUser.assigned_tables || [];
+  const assignTable = (tableId) => {
+    setCurrentUser(prev => {
+      const existingTables = prev.assigned_tables || [];
       
       // Toggle assignment - if already assigned, remove it
       let updatedTables;
@@ -106,41 +204,51 @@ export default function ServiceRequests() {
         updatedTables = [...existingTables, tableId];
       }
       
-      await User.updateMyUserData({ assigned_tables: updatedTables });
-      
-      // Update current user state
-      setCurrentUser(prev => ({
+      return {
         ...prev,
         assigned_tables: updatedTables
-      }));
-      
-      // Reload requests to show newly assigned tables
-      loadRequests();
-    } catch (error) {
-      console.error("Error assigning table:", error);
-    }
+      };
+    });
   };
 
-  const handleAddRequest = async () => {
-    try {
-      await ServiceRequest.create({
-        table_id: newRequest.table_id,
-        type: newRequest.type,
-        details: newRequest.details,
-        status: "pending"
-      });
-      
-      setShowAddDialog(false);
-      setNewRequest({
-        table_id: "",
-        type: "water",
-        details: ""
-      });
-      
-      loadRequests();
-    } catch (error) {
-      console.error("Error creating service request:", error);
+  const handleAddRequest = () => {
+    // Get available service types
+    const savedTypes = localStorage.getItem('serviceTypes');
+    let serviceTypes = [];
+    
+    if (savedTypes) {
+      try {
+        const parsedTypes = JSON.parse(savedTypes);
+        // Only include active service types
+        serviceTypes = parsedTypes.filter(type => type.active);
+      } catch (error) {
+        console.error("Error loading service types:", error);
+      }
     }
+    
+    // If no valid service types, use fallback default
+    if (serviceTypes.length === 0) {
+      serviceTypes = [
+        { id: "water", name: "Water" },
+        { id: "napkins",  name: "Napkins" },
+        { id: "utensils", name: "Utensils" },
+        { id: "assistance", name: "Assistance" },
+        { id: "other", name: "Other" }
+      ];
+    }
+    
+    setShowAddDialog(true);
+    setNewRequest({
+      table_id: "",
+      type: serviceTypes[0]?.id || "water",
+      details: ""
+    });
+  };
+
+  const handleRefresh = () => {
+    loadData();
+    setRefreshTimer(30);
+    alert('Service requests refreshed.');
   };
 
   const filteredRequests = activeTab === "all" 
@@ -149,6 +257,12 @@ export default function ServiceRequests() {
 
   const isStaff = currentUser?.role_type === 'staff';
   const isManager = currentUser?.role_type === 'manager';
+
+  // Create URL helper function directly in the component
+  const createPageUrl = (pageName) => {
+    if (!pageName) return "/";
+    return "/" + pageName;
+  };
 
   if (loading) {
     return (
@@ -159,26 +273,27 @@ export default function ServiceRequests() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Service Requests</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Service Requests</h1>
             <p className="text-gray-500">
               Auto-refreshes in {refreshTimer}s
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="ml-2" 
-                onClick={loadRequests}
+                className="ml-2"
+                onClick={handleRefresh}
               >
+                <RefreshCw className="w-3 h-3 mr-1" />
                 Refresh Now
               </Button>
             </p>
           </div>
           
           {isManager && (
-            <Button onClick={() => setShowAddDialog(true)}>
+            <Button onClick={() => handleAddRequest()} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Create Request
             </Button>
@@ -259,7 +374,7 @@ export default function ServiceRequests() {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
                     <Table2 className="w-5 h-5 text-gray-500" />
-                    <CardTitle>Table {request.table_id}</CardTitle>
+                    <CardTitle>{request.table_id}</CardTitle>
                   </div>
                   <Badge 
                     variant={request.status === "pending" ? "warning" : "default"}
@@ -318,7 +433,7 @@ export default function ServiceRequests() {
       </div>
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px] p-4 sm:p-6 max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Create Service Request</DialogTitle>
           </DialogHeader>
@@ -345,11 +460,38 @@ export default function ServiceRequests() {
                 value={newRequest.type}
                 onChange={(e) => setNewRequest(prev => ({ ...prev, type: e.target.value }))}
               >
-                <option value="water">Water</option>
-                <option value="napkins">Napkins</option>
-                <option value="utensils">Utensils</option>
-                <option value="assistance">Assistance</option>
-                <option value="other">Other</option>
+                {(() => {
+                  // Get available service types
+                  const savedTypes = localStorage.getItem('serviceTypes');
+                  let serviceTypes = [];
+                  
+                  if (savedTypes) {
+                    try {
+                      const parsedTypes = JSON.parse(savedTypes);
+                      // Only include active service types
+                      serviceTypes = parsedTypes.filter(type => type.active);
+                    } catch (error) {
+                      console.error("Error loading service types:", error);
+                    }
+                  }
+                  
+                  // If no valid service types, use fallback default
+                  if (serviceTypes.length === 0) {
+                    serviceTypes = [
+                      { id: "water", name: "Water" },
+                      { id: "napkins", name: "Napkins" },
+                      { id: "utensils", name: "Utensils" },
+                      { id: "assistance", name: "Assistance" },
+                      { id: "other", name: "Other" }
+                    ];
+                  }
+                  
+                  return serviceTypes.map(type => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ));
+                })()}
               </select>
             </div>
             <div>
@@ -358,15 +500,35 @@ export default function ServiceRequests() {
                 value={newRequest.details}
                 onChange={(e) => setNewRequest(prev => ({ ...prev, details: e.target.value }))}
                 placeholder="Additional details about the request"
+                className="min-h-[100px]"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-end gap-2">
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
             <Button 
-              onClick={handleAddRequest}
+              onClick={() => {
+                const newReq = {
+                  id: `req-${Date.now()}`,
+                  table_id: newRequest.table_id,
+                  type: newRequest.type,
+                  details: newRequest.details,
+                  status: "pending",
+                  created_date: new Date().toISOString()
+                };
+                
+                setRequests(prev => [...prev, newReq]);
+                setShowAddDialog(false);
+                setNewRequest({
+                  table_id: "",
+                  type: "water",
+                  details: ""
+                });
+                
+                alert(`New service request for ${newReq.table_id} has been created.`);
+              }}
               disabled={!newRequest.table_id}
             >
               Create Request

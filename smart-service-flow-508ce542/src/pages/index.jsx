@@ -1,81 +1,98 @@
-import Layout from "./Layout.jsx";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Building2, Users, User } from "lucide-react";
 
-import Dashboard from "./Dashboard";
+export default function HomePage() {
+  const [roleType, setRoleType] = useState("customer");
 
-import Tables from "./Tables";
-
-import Customer from "./Customer";
-
-import ServiceRequests from "./ServiceRequests";
-
-import Menu from "./Menu";
-
-import StaffManagement from "./StaffManagement";
-
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-
-const PAGES = {
-    
-    Dashboard: Dashboard,
-    
-    Tables: Tables,
-    
-    Customer: Customer,
-    
-    ServiceRequests: ServiceRequests,
-    
-    Menu: Menu,
-    
-    StaffManagement: StaffManagement,
-    
-}
-
-function _getCurrentPage(url) {
-    if (url.endsWith('/')) {
-        url = url.slice(0, -1);
+  useEffect(() => {
+    // Check if there's a saved role in localStorage and redirect if found
+    const savedRole = localStorage.getItem("userRoleType");
+    if (savedRole) {
+      redirectToRolePage(savedRole);
     }
-    let urlLastPart = url.split('/').pop();
-    if (urlLastPart.includes('?')) {
-        urlLastPart = urlLastPart.split('?')[0];
+  }, []);
+
+  const handleRoleSelect = (role) => {
+    setRoleType(role);
+    localStorage.setItem("userRoleType", role);
+    redirectToRolePage(role);
+  };
+
+  const redirectToRolePage = (role) => {
+    if (role === "manager") {
+      window.location.assign("/Dashboard");
+    } else if (role === "staff") {
+      window.location.assign("/ServiceRequests");
+    } else {
+      window.location.assign("/Customer");
     }
+  };
 
-    const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || Object.keys(PAGES)[0];
-}
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white">
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-bold text-blue-600 mb-2">Smart Service Flow</h1>
+        <p className="text-gray-600 text-lg max-w-md mx-auto">
+          Streamline restaurant operations with our integrated service management platform
+        </p>
+      </div>
 
-// Create a wrapper component that uses useLocation inside the Router context
-function PagesContent() {
-    const location = useLocation();
-    const currentPage = _getCurrentPage(location.pathname);
-    
-    return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                
-                
-                <Route path="/Dashboard" element={<Dashboard />} />
-                
-                <Route path="/Tables" element={<Tables />} />
-                
-                <Route path="/Customer" element={<Customer />} />
-                
-                <Route path="/ServiceRequests" element={<ServiceRequests />} />
-                
-                <Route path="/Menu" element={<Menu />} />
-                
-                <Route path="/StaffManagement" element={<StaffManagement />} />
-                
-            </Routes>
-        </Layout>
-    );
-}
-
-export default function Pages() {
-    return (
-        <Router>
-            <PagesContent />
-        </Router>
-    );
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full px-4">
+        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <Building2 className="w-8 h-8 text-blue-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Manager</h2>
+          <p className="text-gray-600 mb-4">
+            Oversee operations, manage tables, and handle restaurant administration
+          </p>
+          <Button 
+            onClick={() => handleRoleSelect("manager")}
+            className="mt-auto"
+          >
+            Enter as Manager
+          </Button>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-indigo-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Staff</h2>
+          <p className="text-gray-600 mb-4">
+            Respond to customer service requests and assist with table service
+          </p>
+          <Button 
+            onClick={() => handleRoleSelect("staff")}
+            className="mt-auto"
+            variant="outline"
+          >
+            Enter as Staff
+          </Button>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <User className="w-8 h-8 text-green-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Customer</h2>
+          <p className="text-gray-600 mb-4">
+            Browse the menu, place orders, and request service at your table
+          </p>
+          <Button 
+            onClick={() => handleRoleSelect("customer")}
+            className="mt-auto"
+            variant="outline"
+          >
+            Enter as Customer
+          </Button>
+        </div>
+      </div>
+      
+      <div className="mt-12 text-center text-gray-500">
+        <p>This is a demo application. Choose any role to explore the features.</p>
+      </div>
+    </div>
+  );
 }

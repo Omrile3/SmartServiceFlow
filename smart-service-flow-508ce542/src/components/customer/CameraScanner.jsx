@@ -1,13 +1,16 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Camera } from "lucide-react";
+import { AlertCircle, Camera, QrCode } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 
 export default function CameraScanner({ onScanSuccess }) {
   const videoRef = useRef(null);
   const [error, setError] = useState(null);
   const [scanning, setScanning] = useState(false);
+  const [manualTableId, setManualTableId] = useState("");
 
   useEffect(() => {
     return () => {
@@ -33,11 +36,13 @@ export default function CameraScanner({ onScanSuccess }) {
         // When video is ready, start scanning
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
+          
           // In a real implementation, we would detect QR codes here
           // For demo purposes, we'll simulate finding a QR code after 3 seconds
           setTimeout(() => {
             // Simulate finding a QR code with a table ID
-            const mockQrCodeData = `${window.location.origin}/customer?table=table-1`;
+            // Use the most accurate URL format for consistent parsing
+            const mockQrCodeData = `${window.location.origin}/Customer?table=table-1`;
             setScanning(false);
             stopCamera();
             onScanSuccess(mockQrCodeData);
@@ -46,7 +51,7 @@ export default function CameraScanner({ onScanSuccess }) {
       }
     } catch (err) {
       console.error('Failed to access camera:', err);
-      setError('Camera access denied. Please check your browser permissions.');
+      setError('Camera access denied. Please check your browser permissions and try entering the table ID manually.');
       setScanning(false);
     }
   };
@@ -58,6 +63,14 @@ export default function CameraScanner({ onScanSuccess }) {
       videoRef.current.srcObject = null;
     }
     setScanning(false);
+  };
+
+  const handleManualEntry = () => {
+    if (manualTableId) {
+      onScanSuccess(manualTableId);
+    } else {
+      setError("Please enter a valid table ID");
+    }
   };
 
   return (
@@ -82,6 +95,7 @@ export default function CameraScanner({ onScanSuccess }) {
               <div className="text-white text-center">
                 <Camera className="w-12 h-12 mx-auto mb-2" />
                 <p>Camera is inactive</p>
+                <p className="text-sm mt-2">Smart Service Flow</p>
               </div>
             </div>
           )}
@@ -91,10 +105,22 @@ export default function CameraScanner({ onScanSuccess }) {
         
         <Button 
           onClick={scanning ? stopCamera : startScanner} 
-          className="w-full"
+          className="w-full mb-4"
         >
           {scanning ? 'Stop Camera' : 'Start Scanner'}
         </Button>
+        
+        <div className="mt-6 border-t pt-4">
+          <p className="text-sm mb-3 font-medium">Or enter table ID manually:</p>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="e.g. table-1" 
+              value={manualTableId} 
+              onChange={(e) => setManualTableId(e.target.value)}
+            />
+            <Button onClick={handleManualEntry}>Enter</Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
