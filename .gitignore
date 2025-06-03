@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .env
+
+# Ignore lockfile
+package-lock.json
