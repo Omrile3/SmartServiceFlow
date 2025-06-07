@@ -3,13 +3,13 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 
-// === Replace with your real sandbox credentials ===
+
 $clientId = 'AWhm77VyYhIadVoBhWe2zlt6lAJw0Rrxz4xTbSLdwOpvp4pYwLvEvWtiwwjtWDWYaTBql0ZVtjL-Of-s';
 $secret = 'ELTMzw5c_2lW7EWpbqqe1HyRZti8fpuCCGvnVY7pvJOegmhj4ywJ1FyczfY4zb1XGREy31w833lIkpQT';
 
 $paypal_api_base = 'https://api-m.sandbox.paypal.com';
 
-// === Get Bearer Token ===
+
 function getAccessToken($clientId, $secret, $paypal_api_base) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "$paypal_api_base/v1/oauth2/token");
@@ -34,7 +34,7 @@ function getAccessToken($clientId, $secret, $paypal_api_base) {
     return $data['access_token'] ?? null;
 }
 
-// === Extract and forward API request ===
+
 $method = $_SERVER['REQUEST_METHOD'];
 $path = str_replace('/backend/paypal_proxy.php', '', $_SERVER['REQUEST_URI']);
 $url = $paypal_api_base . $path;

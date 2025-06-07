@@ -10,8 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $image = $_POST['image'];
     $availability = $_POST['availability'];
 
-    error_log("Received image field: " . (isset($_POST['image']) ? $_POST['image'] : "Not set"));
-    error_log("Saving menu item with image URL: " . $image);
     $sql = "INSERT INTO menu (name, description, price, category, image, availability) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssdssi", $name, $description, $price, $category, $image, $availability);
