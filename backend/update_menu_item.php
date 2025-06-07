@@ -1,5 +1,5 @@
 <?php
-// Include database connection
+// database connection
 include 'db_connection.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -10,10 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category = $_POST['category'];
     $image = $_POST['image'];
     $availability = $_POST['availability'];
-
-    error_log("Updating menu item with ID: $id");
-    error_log("Received availability: $availability");
-    error_log("Received image for update: " . (isset($_POST['image']) ? $_POST['image'] : "Not provided"));
 
     $sqlParts = [];
     $params = [];
