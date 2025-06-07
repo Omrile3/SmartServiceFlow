@@ -19,7 +19,6 @@ export default function Menu() {
   const [cartItems, setCartItems] = useState([]);
   const [showCart, setShowCart] = useState(false);
 
-  // Load menu items from localStorage when component mounts
   useEffect(() => {
     fetch('/backend/read_menu_items.php')
       .then(response => response.json())
@@ -28,12 +27,9 @@ export default function Menu() {
     setLoading(false);
   }, []);
 
-  // Save menu items to localStorage whenever they change
   useEffect(() => {
-    // Removed localStorage logic as menu items are now managed via backend.
   }, [menuItems, loading]);
 
-    // Load cart items from localStorage when component mounts
     useEffect(() => {
       const savedCartItems = localStorage.getItem('shoppingCart');
       if (savedCartItems) {
@@ -255,114 +251,10 @@ export default function Menu() {
       return;
     }
     
-    // Simulate PayPal redirection
-    const payWithPaypal = confirm("Would you like to pay via PayPal?");
-    
-    if (payWithPaypal) {
-      // Create a mock PayPal popup
-      const width = 450;
-      const height = 650;
-      const left = window.innerWidth / 2 - width / 2;
-      const top = window.innerHeight / 2 - height / 2;
-      
-      const paypalWindow = window.open('', 'PayPal Checkout', 
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`);
-      
-      if (paypalWindow) {
-        const total = calculateTotalPrice();
-        
-        // Create a simple PayPal-like interface in the popup
-        paypalWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>PayPal Checkout</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-              body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; color: #2c2e2f; }
-              .paypal-header { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-              .paypal-logo { width: 150px; margin-bottom: 15px; }
-              .paypal-content { padding: 20px 0; }
-              .order-details { background: #f5f7fa; border-radius: 5px; padding: 15px; margin: 20px 0; }
-              .amount { font-size: 22px; font-weight: bold; }
-              .btn { background: #0070ba; color: white; border: none; padding: 12px 20px; border-radius: 25px; 
-                    width: 100%; font-size: 16px; cursor: pointer; margin-top: 20px; }
-              .btn:hover { background: #005ea6; }
-              .cancel { text-align: center; margin-top: 15px; }
-              .cancel a { color: #0070ba; text-decoration: none; }
-              .currency { font-size: 0.9em; }
-            </style>
-          </head>
-          <body>
-            <div class="paypal-header">
-              <img class="paypal-logo" src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="PayPal Logo">
-              <h2>PayPal Checkout</h2>
-            </div>
-            
-            <div class="paypal-content">
-              <h3>Complete Your Payment</h3>
-              <p>You're paying to: Smart Service Flow</p>
-              
-              <div class="order-details">
-                <p>Order details:</p>
-                <p class="amount">${total.toFixed(2)} <span class="currency">₪</span></p>
-              </div>
-              
-              <button class="btn" id="pay-btn">Pay Now</button>
-              
-              <div class="cancel">
-                <a href="#" id="cancel-btn">Cancel and return</a>
-              </div>
-            </div>
-            
-            <script>
-              document.getElementById('pay-btn').addEventListener('click', function() {
-                // Show a loading indicator
-                this.innerHTML = 'Processing...';
-                this.disabled = true;
-                // After a delay, show success and close window
-                setTimeout(() => {
-                  alert('Payment successful!');
-                  window.opener.postMessage('paypal-success', '*');
-                  window.close();
-                }, 1500);
-              });
-              
-              document.getElementById('cancel-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                window.opener.postMessage('paypal-cancel', '*');
-                window.close();
-              });
-            </script>
-          </body>
-          </html>
-        `);
-        
-        // Set up message listener for when PayPal window completes payment
-        const messageHandler = (event) => {
-          if (event.data === 'paypal-success') {
-            alert("Payment completed successfully! Your cart has been cleared.");
-            setCartItems([]);
-            setShowCart(false);
-            localStorage.removeItem('shoppingCart');
-            window.removeEventListener('message', messageHandler);
-          } else if (event.data === 'paypal-cancel') {
-            alert("Payment was cancelled. Your items are still in your cart.");
-            window.removeEventListener('message', messageHandler);
-          }
-        };
-        
-        window.addEventListener('message', messageHandler);
-      } else {
-        // If popup blocked, show fallback
-        alert('Please allow popups to use PayPal checkout.');
-      }
-    } else {
-      alert("Simulating credit card payment... Payment successful!");
-      setCartItems([]);
-      setShowCart(false);
-      localStorage.removeItem('shoppingCart');
-    }
+alert("Simulating credit card payment... Payment successful!");
+setCartItems([]);
+setShowCart(false);
+localStorage.removeItem('shoppingCart');
   };
 
   useEffect(() => {
